@@ -1,45 +1,91 @@
 import pandas as pd
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, Text, Float
 
+def load_data(url, delimiter):
+    """
+    Load data from an online CSV file.
+
+    Args:
+    url (str): The URL of the online CSV file.
+    delimiter (str): The delimiter used in the CSV.
+
+    Returns:
+    DataFrame: A pandas df that contains the loaded data.
+    """
+    try:
+        return pd.read_csv(url, delimiter=delimiter)
+    except Exception as e:
+        print(f"Error loading data: {e}")
+        return None
+
+def create_database(engine_url):
+    """
+    Create a SQLite database and define its structure.
+
+    Args:
+    engine_url (str): The URL for connecting to the SQLite database.
+
+    Returns:
+    engine, metadata: The SQLAlchemy engine and metadata for the database.
+    """
+    try:
+        engine = create_engine(engine_url)
+        metadata = MetaData()
+
+        airports_table = Table('airports', metadata,
+            Column('column_1', Integer),  # Lfd. Nummer
+            Column('column_2', Text),     # Name des Flughafens
+            Column('column_3', Text),     # Ort
+            Column('column_4', Text),     # Land
+            Column('column_5', Text),     # IATA
+            Column('column_6', Text),     # ICAO
+            Column('column_7', Float),    # Latitude
+            Column('column_8', Float),    # Longitude
+            Column('column_9', Integer),  # Altitude
+            Column('column_10', Float),   # Zeitzone
+            Column('column_11', Text),    # DST
+            Column('column_12', Text),    # Zeitzonen-Datenbank
+            Column('geo_punkt', Text)     # geo_punkt
+        )
+
+        metadata.create_all(engine)
+        return engine, metadata
+    except Exception as e:
+        print(f"Error creating database: {e}")
+        return None, None
+
+def insert_data(engine, table_name, data):
+    """
+    Insert data into a SQLite database table.
+
+    Args:
+    engine: The SQLAlchemy engine used to connect to the database.
+    table_name (str): The name of the table where data will be inserted.
+    data (DataFrame): The pandas DataFrame containing the data to insert.
+    """
+    try:
+        with engine.connect() as connection:
+            data.to_sql(table_name, con=connection, if_exists='replace', index=False)
+    except Exception as e:
+        print(f"Error inserting data: {e}")
+
+def main():
+    """
+    Main function that calls the other functinos to load data from a CSV file and insert it into a SQLite database
+    """
 # URL of the rhein-kreis-neuss-flughafen-weltweit dataset
-# The metadata is for my self.
+# The metadata is for myself.
 metadata_url = 'https://opendata.rhein-kreis-neuss.de/explore/dataset/rhein-kreis-neuss-flughafen-weltweit/information/?sort=-column_1'
 dataset_url = 'https://opendata.rhein-kreis-neuss.de/api/v2/catalog/datasets/rhein-kreis-neuss-flughafen-weltweit/exports/csv'
-# Fetch the data using ; as a delimiter (as stated by the description
-df = pd.read_csv(dataset_url, delimiter=";")
-
-## Display the first few rows to examine the data
-#print(df.head())
-
-# Define the URL of SQLite
 sqlite_url = "sqlite:///airports.sqlite"
 
-# Create an SQLite engine
-sql_engine = create_engine(sqlite_url)
+# Fetch the data using ; as a delimiter (as stated by the description)
 
-# Define metadata for the db
-metadata = MetaData()
+df = load_data(dataset_url, delimiter=";")
+if df is not None:
+    engine, metadata = create_database(sqlite_url)
+    if engine is not None and metadata is not None:
+        insert_data(engine, 'airports', df)
 
-# Define the table structure
-# Die Informationen der Columns habe ich aus der Beschreibung der CSV-Datei (siehe metadata_url)
-airports_table = Table('airports', metadata,
-    Column('column_1', Integer),  # Lfd. Nummer
-    Column('column_2', Text),     # Name des Flughafens
-    Column('column_3', Text),     # Ort
-    Column('column_4', Text),     # Land
-    Column('column_5', Text),     # IATA
-    Column('column_6', Text),     # ICAO
-    Column('column_7', Float),    # Latitude
-    Column('column_8', Float),    # Longitude
-    Column('column_9', Integer),  # Altitude
-    Column('column_10', Float),   # Zeitzone
-    Column('column_11', Text),    # DST
-    Column('column_12', Text),    # Zeitzonen-Datenbank
-    Column('geo_punkt', Text)     # geo_punkt
-)
-
-# Create the table
-metadata.create_all(sql_engine)
-
-# Write the DataFrame to the SQLite table. If data already exists, then overwrite the data!
-df.to_sql('airports', con=sql_engine, if_exists='replace', index=False)
+if __name__ == "__main__":
+    main()
