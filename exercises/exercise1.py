@@ -8,7 +8,7 @@ dataset_url = 'https://opendata.rhein-kreis-neuss.de/api/v2/catalog/datasets/rhe
 # Fetch the data using ; as a delimiter (as stated by the description
 df = pd.read_csv(dataset_url, delimiter=";")
 
-## Display the first few rows to examine the data
+## Display the first few rows to examine the data 
 #print(df.head())
 
 # Define the URL of SQLite
