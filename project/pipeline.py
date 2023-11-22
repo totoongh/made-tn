@@ -46,7 +46,20 @@ database_path = os.path.join('data', 'projectdb.db')
 engine = create_engine(f'sqlite:///{database_path}')
 
 metadata = MetaData()
-wettertable =  Table('geodedata', metadata,
+wetter_table =  Table('wetter', metadata,
+            Column('strecke', Text),  # Lfd. Nummer
+            Column('latitude', Float),     # Name des Flughafens
+            Column('longitude', Float),     # Ort
+            Column('Nebel', Float),     # Land
+            Column('Black Ice', Float),     # IATA
+            Column('Neuschnee', Float),     # ICAO
+            Column('Gesamtschnee', Float),    # Latitude
+            Column('Niederschlag', Float),    # Longitude
+            Column('Wind', Float),
+              Column('Windboen', Float),
+                Column('Gesamt', Float),  # Altitude
+        )
+geode_table = Table('geode', metadata,
             Column('city', Text),  # Lfd. Nummer
             Column('latitude', Float),     # Name des Flughafens
             Column('longitude', Float),     # Ort
@@ -61,7 +74,7 @@ metadata.create_all(engine)
 
 with engine.connect() as connection:
     try:
-        wetter_data_df.to_sql('wetterdata', con=connection, if_exists='replace', index=False)
+        wetter_data_df.to_sql('wetter', con=connection, if_exists='replace', index=False)
         geode_data_df.to_sql('geode', con=connection, if_exists='replace', index=False)
     except Exception as e:
         print(f"Error inserting data: {e}")
