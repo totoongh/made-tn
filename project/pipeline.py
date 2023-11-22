@@ -1,6 +1,6 @@
 import pandas as pd
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, Text, Float
-
+import os
 def load_data(url, delimiter):
     """
     Load data from an online CSV file.
@@ -40,10 +40,13 @@ mobilithek_geode_url = "https://simplemaps.com/static/data/country-cities/de/de.
 wetter_data_df = load_data(mobilithek_wetterereignisse_url, delimiter=";")
 geode_data_df = load_data(mobilithek_geode_url, delimiter=",")
 
-engine = create_engine('sqlite:///projectdb.sqlite')
+database_path = os.path.join('data', 'projectdb.db')
 
-geometadata = MetaData()
-wettertable =  Table('geodedata', geometadata,
+# Step 2: Create an engine to the SQLite database at the specified path
+engine = create_engine(f'sqlite:///{database_path}')
+
+metadata = MetaData()
+wettertable =  Table('geodedata', metadata,
             Column('city', Text),  # Lfd. Nummer
             Column('latitude', Float),     # Name des Flughafens
             Column('longitude', Float),     # Ort
@@ -54,6 +57,7 @@ wettertable =  Table('geodedata', geometadata,
             Column('population', Integer),    # Longitude
             Column('population_proper', Integer),  # Altitude
         )
+metadata.create_all(engine)
 
 with engine.connect() as connection:
     try:
