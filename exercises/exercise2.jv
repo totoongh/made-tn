@@ -65,12 +65,6 @@ constraint VerkehrAllowList on text:
         "FV", "RV", "nur DPN",
     ];
 
-block StatusColumnDeleter oftype ColumnDeleter {
-        delete: [column D];
- }
-
-
-
 block TrainstopsSQLiteLoader oftype SQLiteLoader {
     table: "trainstops";
     file: "./trainstops.sqlite";
