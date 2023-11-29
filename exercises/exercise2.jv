@@ -1,72 +1,68 @@
+// Pipeline 'TrainstopsPipeline' gets the Haltstellen-Data from Deutsche Bahn.
 pipeline TrainstopsPipeline{
 
+    //Block sequence in Pipeline
     TrainstopsCSVExtractor
-    -> ABTableInterpreter
+    -> TrainstopsTableInterpreter
     -> TrainstopsSQLiteLoader;
 
+    //CSV Extraction block with delimiter ;
     block TrainstopsCSVExtractor oftype CSVExtractor{
         url: "https://download-data.deutschebahn.com/static/datasets/haltestellen/D_Bahnhof_2020_alle.CSV";
         delimiter: ";";
     }
 
-    block ABTableInterpreter oftype TableInterpreter{
+    //Table Interpreter Block with ValueTypes and Constraints defined below, leaves Status and automatically removes empty-value-rows
+    block TrainstopsTableInterpreter oftype TableInterpreter{
         header: true;
         columns: [
             'EVA_NR' oftype integer, 
             'DS100'oftype text,     
             'IFOPT'oftype IFOPTCode,    
             'NAME'oftype text,    
-            'Verkehr' oftype VerkehrCode,    
-            'Laenge' oftype GeoLocation,   
-            'Breite' oftype GeoLocation,    
+            'Verkehr' oftype VerkehrType,    
+            'Laenge' oftype GeoLocationType,   
+            'Breite' oftype GeoLocationType,    
             'Betreiber_Name' oftype text,  
             'Betreiber_Nr' oftype integer,  
             ];
     }
 
+    // VerkehrType is used for Verkehr-constraints.
+    valuetype VerkehrType oftype text {
+        constraints: [
+            VerkehrAllowList,
+        ];
+    }
 
-constraint OnlyCapitalLettersAndDigits on text:
-    value matches /^[A-Z0-9]*$/;
+    constraint VerkehrAllowList on text:
+        value in [
+            "FV", "RV", "nur DPN",
+        ];
 
-constraint ExactlyTenCharacters on text:
-    value.length == 10;
+    //GeoLocationType is used to constraint the location decimals to within -90 and 90
+    valuetype GeoLocationType oftype decimal {
+        constraints: [
+            GeoConstraintWithinNinety,
+        ];
+    }
 
-valuetype VerkehrCode oftype text {
-    constraints: [
-        VerkehrAllowList,
-    ];
-}
+    constraint GeoConstraintWithinNinety on decimal:
+        value >=-90 and value <=90;
 
-valuetype GeoLocation oftype decimal {
-    constraints: [
-        GeoConstraintWithinNinety,
-    ];
-}
+    //IFOPTCode is used as a RegExConstraint as described in the exercise (not the standard)
+    valuetype IFOPTCode oftype text {
+        constraints: [
+            IFOPTConstraint,
+        ];
+    }
 
-valuetype IFOPTCode oftype text {
-    constraints: [
-        IFOPTConstraint,
-    ];
-}
+    constraint IFOPTConstraint on text:
+        value matches /[a-zA-Z]{2}:[0-9]+(:[0-9]+)?/;
 
-constraint SecondVerkehrAllowList oftype AllowlistConstraint{
-    allowlist: ["FV", "RV", "nur DPN"];
-}
-
-constraint IFOPTConstraint on text:
-    value matches /[a-zA-Z]{2}:[0-9]+(:[0-9]+)?/;
-
-
-constraint GeoConstraintWithinNinety on decimal:
-    value >=-90 and value <=90;
-
-constraint VerkehrAllowList on text:
-    value in [
-        "FV", "RV", "nur DPN",
-    ];
-
-block TrainstopsSQLiteLoader oftype SQLiteLoader {
-    table: "trainstops";
-    file: "./trainstops.sqlite";
-}
+    //Last block for loading the data into a SQLite table.
+    block TrainstopsSQLiteLoader oftype SQLiteLoader {
+        table: "trainstops";
+        file: "./trainstops.sqlite";
+    }
 }
