@@ -29,9 +29,9 @@ jobs:
     # Run pipeline
     - name: Run pipeline
       run: |
-        ./main/project/pipeline.sh
+        ./project/pipeline.sh
 
     # Run pipeline
     - name: Run tests
       run: |
-        ./main/project/tests.sh
+        ./project/tests.sh
