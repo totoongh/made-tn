@@ -84,7 +84,7 @@ validate_cin_mask = daf[1].str.len() == 5
 daf = daf[validate_cin_mask]
 
 for col in keepcols[3:]:
-    daf[col] = pd.to_numeric(daf[col], errors='coerce', downcast='integer')
+    daf[col] = pd.to_numeric(daf[col], errors='coerce', downcast='integer').astype('Int64')
 
 daf.dropna(inplace=True)
 
