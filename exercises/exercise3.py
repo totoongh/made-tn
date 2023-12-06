@@ -88,7 +88,6 @@ for col in keepcols[3:]:
 
 daf.dropna(inplace=True)
 
-# Assuming daf is your DataFrame
 # Create a dictionary mapping current column names (or indices) to new names
 rename_dict = {
     0: 'date',
@@ -101,9 +100,6 @@ rename_dict = {
     52: 'hybrid',
     62: 'plugInHybrid',
     72: 'others',
-    
-
-    # ... add other columns as needed
 }
 
 # Rename the columns
