@@ -16,19 +16,18 @@ jobs:
       with:
         path: main
 
-    - name: Checkout exercise feedback
-      uses: actions/checkout@v3
-      with:
-        repository: jvalue/made-exercise-feedback
-        path: grading
-
     # Install python
     - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
         python-version: 3.11
 
-    # Run exercise feedback
-    - name: Exercise feedback
+    # Run pipeline
+    - name: Run pipeline
       run: |
-        ./grading/ci/run_grading.sh
+        ./project/pipeline.sh
+
+    # Run pipeline
+    - name: Run tests
+      run: |
+        ./project/tests.sh
