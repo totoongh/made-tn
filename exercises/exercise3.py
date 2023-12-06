@@ -82,9 +82,33 @@ keepcols= [0,1,2,12,22,32,42,52,62,72]
 daf = daf[keepcols]
 validate_cin_mask = daf[1].str.len() == 5
 daf = daf[validate_cin_mask]
+
 for col in keepcols[3:]:
     daf[col] = pd.to_numeric(daf[col], errors='coerce', downcast='integer')
+
 daf.dropna(inplace=True)
+
+# Assuming daf is your DataFrame
+# Create a dictionary mapping current column names (or indices) to new names
+rename_dict = {
+    0: 'date',
+    1: 'CIN',
+    2: 'name',
+    12: 'petrol',
+    22: 'diesel',
+    32: 'gas',
+    42: 'electro',
+    52: 'hybrid',
+    62: 'plugInHybrid',
+    72: 'others',
+    
+
+    # ... add other columns as needed
+}
+
+# Rename the columns
+daf.rename(columns=rename_dict, inplace=True)
+
 
 engine = create_engine(sqlite_url)
 insert_data(engine, 'cars', daf)
