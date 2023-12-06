@@ -31,6 +31,14 @@ jobs:
       run: |
         ./project/pipeline.sh
 
+      # Run pipeline2
+    - name: Run pipeline2
+      run: ls -la
+
+      # Run pipeline
+    - name: Run pipeline
+      run: ls ./project
+
     # Run pipeline
     - name: Run tests
       run: |
