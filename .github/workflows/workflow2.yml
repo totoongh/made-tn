@@ -16,8 +16,6 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-      with:
-        path: main
 
     # Install python
     - name: Set up Python 3.11
@@ -31,9 +29,17 @@ jobs:
     # Run pipeline
     - name: Run pipeline
       run: |
-        ./main/project/pipeline.sh
+        ./project/pipeline.sh
+
+      # Run pipeline2
+    - name: Run pipeline2
+      run: ls -la
+
+      # Run pipeline
+    - name: Run pipeline
+      run: ls ./project
 
     # Run pipeline
     - name: Run tests
       run: |
-        ./main/project/tests.sh
+        ./project/tests.sh

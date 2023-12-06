@@ -1,2 +1,2 @@
-#!/bin/bash
-python3 /project/pipeline.py
+pip install -r requirements.txt
+python3 ./project/pipeline.py
