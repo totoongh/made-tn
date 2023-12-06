@@ -1,11 +1,14 @@
 name: Exercise Feedback 2
 
 on:
+  workflow_dispatch:
+  
   push:
     branches:
     - main
     paths:
     - project/**
+    - .github/workflows/**
 
 jobs:
   exercise-feedback:
@@ -21,13 +24,16 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: 3.11
+  # Run pipeline
+    - name: Run pipeline
+      run: ls -la
 
     # Run pipeline
     - name: Run pipeline
       run: |
-        ./project/pipeline.sh
+        ./main/project/pipeline.sh
 
     # Run pipeline
     - name: Run tests
       run: |
-        ./project/tests.sh
+        ./main/project/tests.sh
