@@ -6,6 +6,7 @@ on:
     - main
     paths:
     - project/**
+    - .github/workflows/**
 
 jobs:
   exercise-feedback:
