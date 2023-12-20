@@ -1,4 +1,4 @@
-name: Exercise Feedback 2
+name: Setup pipeline and test
 
 on:
   workflow_dispatch:
