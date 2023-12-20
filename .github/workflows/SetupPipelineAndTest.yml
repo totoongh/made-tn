@@ -31,15 +31,15 @@ jobs:
       run: |
         ./project/pipeline.sh
 
-      # Run pipeline2
+      # For debugging purposes (logging)
     - name: Run pipeline2
       run: ls -la
 
-      # Run pipeline
+      # For debugging purposes (logging) 
     - name: Run pipeline
       run: ls ./project
 
-    # Run pipeline
+    # Run tests
     - name: Run tests
       run: |
         ./project/tests.sh
