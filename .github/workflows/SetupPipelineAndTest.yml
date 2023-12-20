@@ -11,7 +11,7 @@ on:
     - .github/workflows/**
 
 jobs:
-  exercise-feedback:
+  setup-pipeline-and-test:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
