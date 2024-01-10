@@ -1,4 +1,4 @@
-name: Exercise Feedback 2
+name: Setup pipeline and test
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ on:
     - .github/workflows/**
 
 jobs:
-  exercise-feedback:
+  setup-pipeline-and-test:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
@@ -31,15 +31,15 @@ jobs:
       run: |
         ./project/pipeline.sh
 
-      # Run pipeline2
+      # For debugging purposes (logging)
     - name: Run pipeline2
       run: ls -la
 
-      # Run pipeline
+      # For debugging purposes (logging) 
     - name: Run pipeline
       run: ls ./project
 
-    # Run pipeline
+    # Run tests
     - name: Run tests
       run: |
         ./project/tests.sh
