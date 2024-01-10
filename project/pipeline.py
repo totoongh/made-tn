@@ -6,8 +6,9 @@ from zipfile import ZipFile
 
 ### URLS
 url1 = "http://openpsychometrics.org/_rawdata/16PF.zip"
-#url2 = "https://happiness-report.s3.amazonaws.com/2023/DataForFigure2.1WHR2023.xls"
 url2 = "data/DataForFigure2.1WHR2023.csv"
+
+### LOAD DATA FROM THE INTERNET
 
 def load_zipped_csv(url, extractionpath, filename, delimiter):
     """
@@ -47,45 +48,73 @@ def load_data(url, delimiter):
     except Exception as e:
         print(f"Error loading data: {e}")
         return None
+    
 
-def create_personality_database(engine_url):
+### PREPROCESS DATAFRAMES
+    
+def preprocess_personality_df(df):
     """
-    Create a SQLite database and define its structure.
+    Preprocesses the personality DataFrame.
 
     Args:
-    engine_url (str): The URL for connecting to the SQLite database.
+    df (DataFrame): The personality DataFrame to be preprocessed.
 
     Returns:
-    engine, metadata: The SQLAlchemy engine and metadata for the database.
+    DataFrame: The preprocessed DataFrame.
     """
-    try:
-        engine = create_engine(engine_url)
-        metadata = MetaData()
+    # Drop columns gender, age, source and elapsed from df, also drop the given index.
+    df = df.drop(columns=[ 'gender', 'age', 'source'])
 
-        airports_table = Table('airports', metadata,
-            Column('column_1', Integer),  # Lfd. Nummer
-            Column('column_2', Text),     # Name des Flughafens
-            Column('column_3', Text),     # Ort
-            Column('column_4', Text),     # Land
-            Column('column_5', Text),     # IATA
-            Column('column_6', Text),     # ICAO
-            Column('column_7', Float),    # Latitude
-            Column('column_8', Float),    # Longitude
-            Column('column_9', Integer),  # Altitude
-            Column('column_10', Float),   # Zeitzone
-            Column('column_11', Text),    # DST
-            Column('column_12', Text),    # Zeitzonen-Datenbank
-            Column('geo_punkt', Text)     # geo_punkt
-        )
+    # Rename column "country" to "country_code".
+    df = df.rename(columns={'country': 'country_code'})
 
-        metadata.create_all(engine)
-        return engine, metadata
-    except Exception as e:
-        print(f"Error creating database: {e}")
-        return None, None
+    # Drop all rows where elapsed is less than 60.
+    df = df[df['elapsed'] >= 163]
 
-def create_world_kpi_database(engine_url):
-    pass
+    # Only keep rows where value in column 'accuracy' is between 80 and 100.
+    df = df[(df['accuracy'] >= 80) & (df['accuracy'] <= 100)]
+
+    # Drop all rows which have a zero-value in ANY column.
+    df = df[(df != 0).all(axis=1)]
+
+    # Group by column "country".
+    # For each country, count how often it occurs in the original dataset and add this as a new column "count".
+    # Make this a dataframe with count column.
+    occurances = df.groupby('country_code').size().to_frame('count')
+
+    #Here, drop the countries where the count is less than 20 (for reliability).
+    occurances = occurances[occurances['count'] >= 20]
+
+    df = df.groupby('country_code').mean()
+
+    # Merge the two DataFrames on the country column. 
+    df = pd.merge(df, occurances, on='country_code', how='inner')
+
+    # Make it so that the dataframe is a real dataframe and not grouped by (i.e., that the country column remains a column).
+    df = df.reset_index()
+
+    return df
+
+def preprocess_worldhappiness_df(df):
+    # Only keep country name and ladder score columns.
+    df = df[['Country name', 'Ladder score']]
+
+
+    # Read country codes.txt into a DataFrame; a row is in the format AD,"Andorra"
+    country_codes = pd.read_csv('data/Country codes.txt', delimiter=',', names=['country_code', 'Country name'])
+
+    # Merge the two DataFrames on the country column.
+    df = pd.merge(df, country_codes, on='Country name', how='left')
+
+    # Make the country_code of Namibia NA instead of NaN.
+    df.loc[df['Country name'] == 'Namibia', 'country_code'] = 'NA'
+
+    # Remove the row where country_code is NaN (but not NA). This effectively only removes the row for Kosovo,
+    # which is not in the personality dataset and most likely is part of the Serbia row.
+    df = df[df['country_code'].notna()]
+
+    return df
+
 
 def insert_data(engine, table_name, data):
     """
@@ -102,21 +131,14 @@ def insert_data(engine, table_name, data):
     except Exception as e:
         print(f"Error inserting data: {e}")
 
-def main():
-    """
-    Main function that calls the other functinos to load data from a CSV file and insert it into a SQLite database
-    """
-# URL of the rhein-kreis-neuss-flughafen-weltweit dataset
-# The metadata is for myself.
-# Fetch the data using ; as a delimiter (as stated by the description)
-
-df1 = load_zipped_csv(url1, 'data/personality', '16PF/data.csv', '\t')
+personality_df_raw = load_zipped_csv(url1, 'data/personality', '16PF/data.csv', '\t')
 df2 = load_data(url2, ";")
 
+personality_df_preprocessed = preprocess_personality_df(personality_df_raw)
+worldhappiness_df_preprocessed = preprocess_worldhappiness_df(df2)
+# Make ladder score a float.
+worldhappiness_df_preprocessed['Ladder score'] = worldhappiness_df_preprocessed['Ladder score'].str.replace(',','.').astype(float)
+
 engine = create_engine('sqlite:///project.sqlite')
-insert_data(engine, 'personality', df1)
-insert_data(engine, 'worldhappiness', df2)
-
-
-if __name__ == "__main__":
-    main()
+insert_data(engine, 'personality', personality_df_preprocessed)
+insert_data(engine, 'worldhappiness', worldhappiness_df_preprocessed)
