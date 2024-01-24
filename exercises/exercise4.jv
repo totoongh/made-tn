@@ -1,7 +1,5 @@
 
-
-
-// Pipeline 'TrainstopsPipeline' gets the Haltstellen-Data from Deutsche Bahn.
+// Pipeline 'TemperaturesPipeline' gets the temperatures (DWD) and battery temperatures from the mowesta dataset.
 pipeline TemperaturesPipeline{
 
     //Block sequence in Pipeline
@@ -15,23 +13,31 @@ pipeline TemperaturesPipeline{
     -> TemperaturesTableInterpreter
     -> TemperaturCelsiusToFahrenheitTransformer
     -> BatterietemperaturCelsiusToFahrenheitTransformer
-    //-> TemperaturesGeraetaktivTableTransformer
     -> TemperaturesSQLiteLoader;
 
+    //Get zip from URL
     block TemperaturesHTTPExtractor oftype HttpExtractor{
         url: "https://www.mowesta.com/data/measure/mowesta-dataset-20221107.zip";
     }
 
+    //Unzip
     block TemperaturesArchiveInterpreter oftype ArchiveInterpreter{
         archiveType: "zip";
     }
 
+    //Pick the data.csv file from the unzipped folder
     block TemperaturesFilePicker oftype FilePicker {
         path: "/data.csv";
     }
 
+    //Interpret file
     block TemperaturesTextFileInterpreter oftype TextFileInterpreter {
         encoding: "utf8";
+    }
+
+    //I delete the first line, which are the headers. Why? Because then I'm able to rename the columns the way I want it to be.
+    block TemperaturesTextLineDeleter oftype TextLineDeleter {
+        lines: [1];
     }
 
     //CSV Extraction block with delimiter ;
@@ -39,44 +45,59 @@ pipeline TemperaturesPipeline{
         delimiter: ";";
     }
 
+    //Delete the columns F, G, H, I, because they are not needed.
     block TemperaturesColumnsDeleter oftype ColumnDeleter{
         delete: [column F, column G, column H, column I];
     }
 
-    block TemperaturesTextLineDeleter oftype TextLineDeleter {
-        lines: [1];
+    //Define constraints for the columns (id>0, month between 1 and 12, geraet active = Ja or Nein)
+    constraint GeraeteConstraint on integer:
+        value > 0;
+
+    constraint MonatConstraint on integer:
+        value >= 1 and value <= 12;
+
+    constraint GeraetAktivConstraint oftype AllowlistConstraint{
+        allowlist: ["Ja", "Nein"];
     }
 
-    //Table Interpreter Block with ValueTypes and Constraints defined below, leaves Status and automatically removes empty-value-rows
+    valuetype GeraeteType oftype integer {
+        constraints: [
+            GeraeteConstraint,
+        ];
+    }
+
+    valuetype MonatType oftype integer {
+        constraints: [
+            MonatConstraint,
+        ];
+    }
+
+    valuetype GeraetAktivType oftype text {
+        constraints: [
+            GeraetAktivConstraint,
+        ];
+    }
+
+    //Table InterpreterBlock with ValueTypes and Constraints defined below
     block TemperaturesTableInterpreter oftype TableInterpreter{
         header: false;
         columns: [
-            'Geraet' oftype integer, 
+            'Geraet' oftype GeraeteType, 
             'Hersteller'oftype text,     
             'Model'oftype text,    
-            'Monat'oftype integer,    
+            'Monat'oftype MonatType,    
             'Temperatur' oftype decimal,  
             'Batterietemperatur' oftype decimal,   
-            'Geraet aktiv' oftype text,
+            'Geraet aktiv' oftype GeraetAktivType,
             ];
     }
 
+    //transforms temperatures from Celsius zu Fahrenheit
     transform CelsiusToFahrenheit {
         from Celsius oftype decimal;
         to Fahrenheit oftype decimal;
         Fahrenheit: (Celsius * 9/5) + 32;
-    }
-
-    transform GeraetaktivBooleanizer {
-        from JaNeinValue oftype text;
-        to BooleanValue oftype boolean;
-        BooleanValue: JaNeinValue == "Ja";
-    }
-
-    block TemperaturesGeraetaktivTableTransformer oftype TableTransformer{
-        inputColumns: ['Geraet aktiv'];
-        outputColumn: 'Geraet aktiv';
-        use: GeraetaktivBooleanizer;
     }
 
     block TemperaturCelsiusToFahrenheitTransformer oftype TableTransformer {
