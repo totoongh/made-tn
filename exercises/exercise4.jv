@@ -1,0 +1,108 @@
+
+
+
+// Pipeline 'TrainstopsPipeline' gets the Haltstellen-Data from Deutsche Bahn.
+pipeline TemperaturesPipeline{
+
+    //Block sequence in Pipeline
+    TemperaturesHTTPExtractor 
+    -> TemperaturesArchiveInterpreter
+    -> TemperaturesFilePicker
+    -> TemperaturesTextFileInterpreter
+    -> TemperaturesCSVInterpreter
+    -> TemperaturesTableInterpreter
+    -> TemperaturCelsiusToFahrenheitTransformer
+    -> BatterietemperaturCelsiusToFahrenheitTransformer
+    -> TemperaturesGeraetaktivTableTransformer
+    -> TemperaturesSQLiteLoader;
+
+    block TemperaturesHTTPExtractor oftype HttpExtractor{
+        url: "https://www.mowesta.com/data/measure/mowesta-dataset-20221107.zip";
+    }
+
+    block TemperaturesArchiveInterpreter oftype ArchiveInterpreter{
+        archiveType: "zip";
+    }
+
+    block TemperaturesFilePicker oftype FilePicker {
+        path: "/data.csv";
+    }
+
+    block TemperaturesTextFileInterpreter oftype TextFileInterpreter {
+        encoding: "utf8";
+    }
+
+    //CSV Extraction block with delimiter ;
+    block TemperaturesCSVInterpreter oftype CSVInterpreter {
+        delimiter: ";";
+    }
+
+    //Table Interpreter Block with ValueTypes and Constraints defined below, leaves Status and automatically removes empty-value-rows
+    block TemperaturesTableInterpreter oftype TableInterpreter{
+        header: true;
+        columns: [
+            'Geraet' oftype integer, 
+            'Hersteller'oftype text,     
+            'Model'oftype text,    
+            'Monat'oftype integer,    
+            'Temperatur in °C (DWD)' oftype decimal,    
+            'Batterietemperatur in °C' oftype decimal,   
+            'Geraet aktiv' oftype text,
+            ];
+    }
+
+    transform ValueCopier {
+        from OrigValue oftype decimal;
+        to NewValue oftype decimal;
+        NewValue: OrigValue;
+    }
+
+    transform CelsiusToFahrenheit {
+        from Celsius oftype decimal;
+        to Fahrenheit oftype decimal;
+        Fahrenheit: (Celsius * 9/5) + 32;
+    }
+
+    transform GeraetaktivBooleanizer {
+        from JaNeinValue oftype text;
+        to BooleanValue oftype boolean;
+        BooleanValue: JaNeinValue == "Ja";
+    }
+
+    /*block TemperaturesTemperaturTableTransformer oftype TableTransformer{
+        inputColumns: ['Temperatur in °C (DWD)'];
+        outputColumn: 'Temperatur';
+        use: ValueCopier;
+    }     
+
+    block TemperaturesBatterieTemperaturTableTransformer oftype TableTransformer{
+        inputColumns: ['Batterietemperatur in °C'];
+        outputColumn: 'Batterietemperatur';
+        use: ValueCopier;
+    }     */
+
+    block TemperaturesGeraetaktivTableTransformer oftype TableTransformer{
+        inputColumns: ['Geraet aktiv'];
+        outputColumn: 'Geraet aktiv';
+        use: GeraetaktivBooleanizer;
+    }
+
+    block TemperaturCelsiusToFahrenheitTransformer oftype TableTransformer {
+    inputColumns: ['Temperatur in °C (DWD)'];
+    outputColumn: 'Temperatur';
+    use: CelsiusToFahrenheit;
+    }
+
+    block BatterietemperaturCelsiusToFahrenheitTransformer oftype TableTransformer {
+    inputColumns: ['Batterietemperatur in °C'];
+    outputColumn: 'Batterietemperatur';
+    use: CelsiusToFahrenheit;
+    }
+
+
+    //Last block for loading the data into a SQLite table.
+    block TemperaturesSQLiteLoader oftype SQLiteLoader {
+        table: "temperatures";
+        file: "./temperatures.sqlite";
+    }
+}
