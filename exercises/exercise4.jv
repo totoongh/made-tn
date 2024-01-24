@@ -9,11 +9,13 @@ pipeline TemperaturesPipeline{
     -> TemperaturesArchiveInterpreter
     -> TemperaturesFilePicker
     -> TemperaturesTextFileInterpreter
+    -> TemperaturesTextLineDeleter
     -> TemperaturesCSVInterpreter
+    -> TemperaturesColumnsDeleter
     -> TemperaturesTableInterpreter
     -> TemperaturCelsiusToFahrenheitTransformer
     -> BatterietemperaturCelsiusToFahrenheitTransformer
-    -> TemperaturesGeraetaktivTableTransformer
+    //-> TemperaturesGeraetaktivTableTransformer
     -> TemperaturesSQLiteLoader;
 
     block TemperaturesHTTPExtractor oftype HttpExtractor{
@@ -37,24 +39,26 @@ pipeline TemperaturesPipeline{
         delimiter: ";";
     }
 
+    block TemperaturesColumnsDeleter oftype ColumnDeleter{
+        delete: [column F, column G, column H, column I];
+    }
+
+    block TemperaturesTextLineDeleter oftype TextLineDeleter {
+        lines: [1];
+    }
+
     //Table Interpreter Block with ValueTypes and Constraints defined below, leaves Status and automatically removes empty-value-rows
     block TemperaturesTableInterpreter oftype TableInterpreter{
-        header: true;
+        header: false;
         columns: [
             'Geraet' oftype integer, 
             'Hersteller'oftype text,     
             'Model'oftype text,    
             'Monat'oftype integer,    
-            'Temperatur in °C (DWD)' oftype decimal,    
-            'Batterietemperatur in °C' oftype decimal,   
+            'Temperatur' oftype decimal,  
+            'Batterietemperatur' oftype decimal,   
             'Geraet aktiv' oftype text,
             ];
-    }
-
-    transform ValueCopier {
-        from OrigValue oftype decimal;
-        to NewValue oftype decimal;
-        NewValue: OrigValue;
     }
 
     transform CelsiusToFahrenheit {
@@ -69,18 +73,6 @@ pipeline TemperaturesPipeline{
         BooleanValue: JaNeinValue == "Ja";
     }
 
-    /*block TemperaturesTemperaturTableTransformer oftype TableTransformer{
-        inputColumns: ['Temperatur in °C (DWD)'];
-        outputColumn: 'Temperatur';
-        use: ValueCopier;
-    }     
-
-    block TemperaturesBatterieTemperaturTableTransformer oftype TableTransformer{
-        inputColumns: ['Batterietemperatur in °C'];
-        outputColumn: 'Batterietemperatur';
-        use: ValueCopier;
-    }     */
-
     block TemperaturesGeraetaktivTableTransformer oftype TableTransformer{
         inputColumns: ['Geraet aktiv'];
         outputColumn: 'Geraet aktiv';
@@ -88,13 +80,13 @@ pipeline TemperaturesPipeline{
     }
 
     block TemperaturCelsiusToFahrenheitTransformer oftype TableTransformer {
-    inputColumns: ['Temperatur in °C (DWD)'];
+    inputColumns: ['Temperatur'];
     outputColumn: 'Temperatur';
     use: CelsiusToFahrenheit;
     }
 
     block BatterietemperaturCelsiusToFahrenheitTransformer oftype TableTransformer {
-    inputColumns: ['Batterietemperatur in °C'];
+    inputColumns: ['Batterietemperatur'];
     outputColumn: 'Batterietemperatur';
     use: CelsiusToFahrenheit;
     }
